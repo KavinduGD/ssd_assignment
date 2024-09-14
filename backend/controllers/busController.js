@@ -4,6 +4,117 @@ const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 const { fileSizeFormatter } = require("../util/fileUpload");
 //create bus
+// const createBus = asyncHandler(async (req, res) => {
+//   const personType = req.personType;
+
+//   if (personType === "user") {
+//     res.status(401);
+//     throw new Error("Not authorized , Please login as a manager");
+//   }
+
+//   const {
+//     busId,
+//     registrationNumber,
+//     chassisNumber,
+//     model,
+//     seatingCapacity,
+//     color,
+//     driver,
+//     conductor,
+//     owner,
+//   } = req.body;
+
+//   //validate
+//   if (
+//     !busId ||
+//     !registrationNumber ||
+//     !chassisNumber ||
+//     !model ||
+//     !seatingCapacity ||
+//     !color ||
+//     !driver ||
+//     !conductor ||
+//     !owner
+//   ) {
+//     if (req.file) {
+//       fs.unlinkSync(req.file.path);
+//     }
+//     res.status(400);
+//     throw new Error("Please fill all the fields");
+//   }
+
+//   //Manage image upload
+//   let fileData = {};
+//   let uploadedFile;
+
+//   if (req.file) {
+//     //upload
+//     try {
+//       uploadedFile = await cloudinary.uploader.upload(req.file.path, {
+//         folder: "KTS/buses",
+//         resource_type: "image",
+//       });
+//     } catch (err) {
+//       res.status(500);
+//       throw new Error("Image could not be uploaded");
+//     }
+
+//     fileData = {
+//       fileName: req.file.originalname,
+//       filePath: uploadedFile.secure_url,
+//       fileType: req.file.mimetype,
+//       fileSize: fileSizeFormatter(req.file.size, 2),
+//       fileID: uploadedFile.public_id,
+//     };
+
+//     //delete file from uploads folder
+//     fs.unlinkSync(req.file.path);
+//   }
+
+//   try {
+//     const bus = await Bus.create({
+//       busId,
+//       registrationNumber,
+//       chassisNumber,
+//       model,
+//       seatingCapacity,
+//       color,
+//       driver,
+//       conductor,
+//       owner,
+//       photo: fileData,
+//     });
+
+//     if (bus) {
+//       res.status(201).json(bus);
+//     } else {
+//       if (fileData.filePath) {
+//         await cloudinary.uploader.destroy(uploadedFile.public_id);
+//       }
+//       res.status(400);
+//       throw new Error("Could not create bus");
+//     }
+//   } catch (err) {
+//     if (fileData.filePath) {
+//       await cloudinary.uploader.destroy(uploadedFile.public_id);
+//     }
+//     res.status(500);
+//     throw new Error(err);
+//   }
+// });
+
+
+const path = require('path');
+
+// Assuming 'uploads' is the directory where files are supposed to be uploaded
+const UPLOAD_DIRECTORY = path.join(__dirname, '../uploads');
+
+function isSafePath(filePath) {
+    const resolvedPath = path.resolve(filePath);
+    return resolvedPath.startsWith(UPLOAD_DIRECTORY);
+}
+
+// Within your function
 const createBus = asyncHandler(async (req, res) => {
   const personType = req.personType;
 
@@ -36,7 +147,7 @@ const createBus = asyncHandler(async (req, res) => {
     !conductor ||
     !owner
   ) {
-    if (req.file) {
+    if (req.file && isSafePath(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
     res.status(400);
@@ -67,8 +178,10 @@ const createBus = asyncHandler(async (req, res) => {
       fileID: uploadedFile.public_id,
     };
 
-    //delete file from uploads folder
-    fs.unlinkSync(req.file.path);
+    //delete file from uploads folder if safe
+    if (isSafePath(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
   }
 
   try {
