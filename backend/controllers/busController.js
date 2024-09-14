@@ -1,17 +1,11 @@
 const Bus = require("../models/busModel");
 const asyncHandler = require("express-async-handler");
 const cloudinary = require("cloudinary").v2;
-const fs = require("fs");
-const path = require('path');
+// const fs = require("fs");
 const { fileSizeFormatter } = require("../util/fileUpload");
-
-// Assuming 'uploads' is the directory where files are supposed to be uploaded
-const UPLOAD_DIRECTORY = path.join(__dirname, '../uploads');
-
-function isSafePath(filePath) {
-    const resolvedPath = path.resolve(filePath);
-    return resolvedPath.startsWith(UPLOAD_DIRECTORY);
-}
+//create bus
+const path = require("path");
+const fs = require("fs").promises;  // Use promises for async file handling
 
 //create bus
 const createBus = asyncHandler(async (req, res) => {
@@ -19,7 +13,7 @@ const createBus = asyncHandler(async (req, res) => {
 
   if (personType === "user") {
     res.status(401);
-    throw new Error("Not authorized , Please login as a manager");
+    throw new Error("Not authorized, Please login as a manager");
   }
 
   const {
@@ -34,7 +28,7 @@ const createBus = asyncHandler(async (req, res) => {
     owner,
   } = req.body;
 
-  //validate
+  //validate input fields
   if (
     !busId ||
     !registrationNumber ||
@@ -46,8 +40,17 @@ const createBus = asyncHandler(async (req, res) => {
     !conductor ||
     !owner
   ) {
-    if (req.file && isSafePath(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    if (req.file) {
+      try {
+        const filePath = path.resolve(__dirname, "../uploads", path.basename(req.file.path));
+        if (filePath.startsWith(path.resolve(__dirname, "../uploads"))) {
+          await fs.unlink(filePath);
+        } else {
+          throw new Error("Invalid file path");
+        }
+      } catch (error) {
+        console.error("Error deleting file:", error);
+      }
     }
     res.status(400);
     throw new Error("Please fill all the fields");
@@ -58,31 +61,31 @@ const createBus = asyncHandler(async (req, res) => {
   let uploadedFile;
 
   if (req.file) {
-    //upload
     try {
+      // upload image to cloudinary
       uploadedFile = await cloudinary.uploader.upload(req.file.path, {
         folder: "KTS/buses",
         resource_type: "image",
       });
-    } catch (err) {
-      if (isSafePath(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+
+      fileData = {
+        fileName: req.file.originalname,
+        filePath: uploadedFile.secure_url,
+        fileType: req.file.mimetype,
+        fileSize: fileSizeFormatter(req.file.size, 2),
+        fileID: uploadedFile.public_id,
+      };
+
+      //delete local file safely
+      const filePath = path.resolve(__dirname, "../uploads", path.basename(req.file.path));
+      if (filePath.startsWith(path.resolve(__dirname, "../uploads"))) {
+        await fs.unlink(filePath);
+      } else {
+        throw new Error("Invalid file path");
       }
+    } catch (err) {
       res.status(500);
       throw new Error("Image could not be uploaded");
-    }
-
-    fileData = {
-      fileName: req.file.originalname,
-      filePath: uploadedFile.secure_url,
-      fileType: req.file.mimetype,
-      fileSize: fileSizeFormatter(req.file.size, 2),
-      fileID: uploadedFile.public_id,
-    };
-
-    //delete file from uploads folder if safe
-    if (isSafePath(req.file.path)) {
-      fs.unlinkSync(req.file.path);
     }
   }
 
@@ -117,46 +120,3 @@ const createBus = asyncHandler(async (req, res) => {
     throw new Error(err);
   }
 });
-
-//get all buses
-const getAllBuses = asyncHandler(async (req, res) => {
-  const buses = await Bus.find({});
-
-  if (buses) {
-    res.json(buses);
-  } else {
-    res.status(404);
-    throw new Error("No buses found");
-  }
-});
-
-const getBusById = asyncHandler(async (req, res) => {
-  const bus = await Bus.findById(req.params.id);
-
-  if (bus) {
-    res.json(bus);
-  } else {
-    res.status(404);
-    throw new Error("Bus not found");
-  }
-});
-
-//delete bus
-const deleteBusById = asyncHandler(async (req, res) => {
-  const bus = await Bus.findById(req.params.id);
-
-  if (bus) {
-    await bus.deleteOne();
-    res.status(200).json({ message: "Bus removed" });
-  } else {
-    res.status(404);
-    throw new Error("Bus not found");
-  }
-});
-
-module.exports = {
-  createBus,
-  getAllBuses,
-  getBusById,
-  deleteBusById,
-};
