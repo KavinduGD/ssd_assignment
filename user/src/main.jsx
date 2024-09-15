@@ -10,7 +10,7 @@ import { RoadRouteContextProvider } from "./context/roadRouteContext.jsx";
 import { TicketContextProvider } from "./context/ticketContext.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <UserContextProvider>
       <RoadRouteContextProvider>
         <TicketContextProvider>
@@ -32,5 +32,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         </TicketContextProvider>
       </RoadRouteContextProvider>
     </UserContextProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 );

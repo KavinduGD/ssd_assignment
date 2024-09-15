@@ -10,6 +10,7 @@ const busRoutes = require("./routes/busRoutes");
 const roadRouteRoutes = require("./routes/roadRouteRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 const ticketRoutes = require("./routes/ticketRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 //middleware
 const morgan = require("morgan");
@@ -27,6 +28,7 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/roadRoutes", roadRouteRoutes);
 app.use("/api/tickets", ticketRoutes);
+app.use("/api/auth", authRoutes);
 
 //ERROR Middleware
 app.use(errorHandler);

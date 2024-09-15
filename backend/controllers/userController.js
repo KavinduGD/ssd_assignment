@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const Token = require("../models/tokenModel");
 const crypto = require("crypto");
 const sendEmail = require("../util/sendEmail");
+const { request } = require("http");
 
 //generate token
 const generateToken = (id) => {
@@ -264,6 +265,121 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Password reset successful,Please login" });
 });
 
+
+//  Google auth request
+const {OAuth2Client} = require('google-auth-library');
+
+
+const googleAuthRequest=asyncHandler(async(req,res)=>{
+  const redirectURL = `${process.env.BACKEND_URL}/api/auth/googleLoginValidate`;
+  
+  const oAuth2Client = new OAuth2Client(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    redirectURL
+    );
+
+    // Generate the url that will be used for the consent dialog.
+    const authorizeUrl = oAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: 'https://www.googleapis.com/auth/userinfo.email  openid',
+      
+      prompt: 'consent'
+    });
+
+    res.json({url:authorizeUrl})
+})
+
+
+// validate google account
+const googleAuthValidate=asyncHandler(async(req,res)=>{
+
+  try{
+  const code = req.query.code;
+
+  if(!code){
+    throw new Error('Code is not available');
+  }
+
+  const redirectURL = `${process.env.BACKEND_URL}/api/auth/googleLoginValidate`;
+  
+
+  const oAuth2Client = new OAuth2Client(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    redirectURL
+  );
+
+    // Exchange the authorization code for access tokens
+  const { tokens } = await oAuth2Client.getToken(code);
+  // console.log(tokens);
+  oAuth2Client.setCredentials(tokens);
+
+  // Get user profile information
+  const ticket = await oAuth2Client.verifyIdToken({
+    idToken: tokens.id_token,
+    audience: process.env.CLIENT_ID,
+  });
+  
+  const payload = ticket.getPayload();
+  const email = payload.email;
+  console.log(email);
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw new Error("User does not exist");
+  }
+
+
+  // console.log(user);
+
+  res.redirect(`${process.env.FRONTEND_URL}/login?token=`+generateToken(user._id));
+
+}
+catch(err){
+  res.redirect(`${process.env.FRONTEND_URL}/login?error=`+err.message);
+
+}
+}
+)
+
+//sent the user data from the token to the frontend
+const getUserDataFromToken = asyncHandler(async (req, res) => {
+
+  const {token} = req.body
+
+  console.log(req.body);
+  if (!token) {
+    res.status(400);
+    throw new Error("Token is required");
+  }
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const user = await User.findById(decoded.id).select("-password");
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  console.log(user);
+  res.status(200).json({
+    _id: user._id,
+    sId: user.sId,
+    fullName: user.fullName,
+    email: user.email,
+    mobileNo: user.mobileNo,
+    dob: user.dob,
+    address: user.address,
+    year: user.year,
+    type: user.type,
+    photo: user.photo,
+    department: user.department,
+    dateOfEntry: user.dateOfEntry,
+    shortName: user.shortName,
+    token,
+  });
+
+});
+
 module.exports = {
   getAllUsers,
   userLogin,
@@ -272,4 +388,8 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
+  googleAuthRequest,
+  googleAuthValidate,getUserDataFromToken
 };
+
+
