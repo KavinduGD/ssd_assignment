@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const adminAxios = axios.create({
-  baseURL: "http://localhost:4000",
+  baseURL: "https://ssd-assignment.onrender.com",
 });
 
 export default adminAxios;
