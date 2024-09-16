@@ -4,6 +4,7 @@ const axios = require("axios");
 const sendEmail = require("../util/sendEmail");
 
 const addTicket = asyncHandler(async (req, res) => {
+  
   const id = req.person._id;
   const name = req.person.fullName;
   const email = req.person.email;
@@ -24,7 +25,7 @@ const addTicket = asyncHandler(async (req, res) => {
   }
 
   const config = {
-    headers: { Authorization: "Bearer 46acc2d0-78f2-11ee-bc93-85031cf98e54" },
+    headers: { Authorization: "Bearer 6a586090-7405-11ef-a391-0376c13ccbd3" },
   };
 
   const bodyParameters = {
@@ -48,6 +49,7 @@ const addTicket = asyncHandler(async (req, res) => {
     );
     qrCode = qrRes.data.url;
   } catch (err) {
+    
     res.status(500);
     throw new Error(err);
   }
