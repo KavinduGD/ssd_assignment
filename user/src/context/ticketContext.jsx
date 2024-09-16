@@ -33,7 +33,11 @@ export const TicketContextProvider = ({ children }) => {
     const getTicket = async () => {
       if (user) { // Check if user exists
         try {
-          const ticket = await userAxios.get("/api/tickets/");
+          const ticket = await userAxios.get(`/api/tickets/${user._id}`,{
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+            },
+          });
           dispatch({ type: "SET_TICKETS", payload: ticket.data });
         } catch (error) {
           console.log(error);

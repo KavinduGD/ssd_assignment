@@ -125,4 +125,15 @@ const getAllTickets = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { addTicket, getAllTickets };
+const getAllTicketsSingleUser = asyncHandler(async (req, res) => {
+    const id = req.params.id;
+    try {
+        const tickets = await Ticket.find({ userId: id });
+        res.json(tickets);
+    } catch (error) {
+        res.status(404);
+        throw new Error(error);
+    }
+});
+
+module.exports = { addTicket, getAllTickets,getAllTicketsSingleUser };
