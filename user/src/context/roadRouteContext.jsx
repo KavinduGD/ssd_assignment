@@ -2,6 +2,7 @@ import { createContext } from "react";
 import { useEffect } from "react";
 import { useReducer } from "react";
 import userAxios from "../baseURL";
+import { useUserContext } from "../hooks/useUserAuthContext";
 
 export const RoadRouteContext = createContext();
 
@@ -26,19 +27,21 @@ export const RoadRouteContextProvider = ({ children }) => {
   const [state, dispatch] = useReducer(roadRouteContextReducer, {
     roadRoutes: [],
   });
+  const { user } = useUserContext();
 
   useEffect(() => {
     const getRoadRoute = async () => {
-      try {
-        const roadRoute = await userAxios.get("/api/roadRoutes/");
-        // console.log(roadRoute.data);
-        dispatch({ type: "SET_ROAD_ROUTES", payload: roadRoute.data });
-      } catch (error) {
-        console.log(error);
+      if (user) { // Check if user exists
+        try {
+          const roadRoute = await userAxios.get("/api/roadRoutes/");
+          dispatch({ type: "SET_ROAD_ROUTES", payload: roadRoute.data });
+        } catch (error) {
+          console.log(error);
+        }
       }
     };
     getRoadRoute();
-  }, []);
+  }, [user]);
 
   return (
     <RoadRouteContext.Provider value={{ ...state, dispatch }}>

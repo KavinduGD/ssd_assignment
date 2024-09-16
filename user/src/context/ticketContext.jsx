@@ -2,6 +2,7 @@ import { createContext } from "react";
 import { useEffect } from "react";
 import { useReducer } from "react";
 import userAxios from "../baseURL";
+import { useUserContext } from "../hooks/useUserAuthContext";
 
 export const TicketContext = createContext();
 
@@ -26,19 +27,21 @@ export const TicketContextProvider = ({ children }) => {
   const [state, dispatch] = useReducer(ticketContextReducer, {
     tickets: [],
   });
-
+  const { user } = useUserContext();
+  
   useEffect(() => {
     const getTicket = async () => {
-      try {
-        const ticket = await userAxios.get("/api/tickets/");
-
-        dispatch({ type: "SET_TICKETS", payload: ticket.data });
-      } catch (error) {
-        console.log(error);
+      if (user) { // Check if user exists
+        try {
+          const ticket = await userAxios.get("/api/tickets/");
+          dispatch({ type: "SET_TICKETS", payload: ticket.data });
+        } catch (error) {
+          console.log(error);
+        }
       }
     };
     getTicket();
-  }, []);
+  }, [user]); 
 
   return (
     <TicketContext.Provider value={{ ...state, dispatch }}>
