@@ -11,10 +11,18 @@ const roadRouteRoutes = require("./routes/roadRouteRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 const ticketRoutes = require("./routes/ticketRoutes");
 const authRoutes = require("./routes/authRoutes");
+const helmet = require("helmet");
+
+
 
 //middleware
 const morgan = require("morgan");
+
 const app = express();
+
+
+// Secure your Express apps by setting various HTTP headers
+app.use(helmet()); 
 
 //middleware
 app.use(cors());
