@@ -23,8 +23,8 @@ app.use(helmet());
 
 // Define trusted origins including local development URLs
 const trustedOrigins = [
-  'https://trusted.com',         // Production trusted domain
-  'https://another-trusted.com', // Another production trusted domain
+  'https://ssd-assignment.vercel.app',         // Production trusted domain
+  'https://ssd-assignment-5jfi.vercel.app', // Another production trusted domain
   'http://localhost:5173',       // Frontend development URL
   'http://localhost:5174'        // Another frontend development URL
 ];
