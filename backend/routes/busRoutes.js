@@ -7,10 +7,19 @@ const {
   deleteBusById,
 } = require("../controllers/busController");
 const { upload } = require("../util/fileUpload");
+const rateLimit = require("express-rate-limit");
+
 const router = express.Router();
 
+const createAccountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again after 15 minutes",
+});
+
+
 //create bus ---manager
-router.post("/", protect, upload.single("image"), createBus);
+router.post("/", protect, createAccountLimiter, upload.single("image"), createBus);
 //get all buses
 router.get("/", getAllBuses);
 //get a single bus
