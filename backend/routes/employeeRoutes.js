@@ -9,36 +9,29 @@ const {
 } = require("../controllers/employeeController");
 const protect = require("../middleware/authMiddleware");
 const { upload } = require("../util/fileUpload");
-const rateLimiter = require("../controllers/rate-limiter");
+const rateLimit = require("express-rate-limit");
 
 const router = express.Router();
 
-// Define rate limiter options
-const createEmployeeRateLimiterOptions = {
-  freeRetries: 30,
-  minWait: 2 * 60 * 60, // 2 hours in seconds
-  maxWait: 2 * 60 * 60, // 2 hours in seconds
-  lifetime: 60 * 60, // 1 hour in seconds
-};
+// Create a rate limiter
+const createAccountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again after 15 minutes",
+});
 
-// Apply the custom rate limiter to the create employee route
-router.post("/", protect, rateLimiter(createEmployeeRateLimiterOptions), upload.single("image"), createEmployee);
 
-// Other routes remain unchanged
-
-// Get all employees
+//create employee  -- manager
+router.post("/", protect,createAccountLimiter, upload.single("image"), createEmployee);
+//get all employees
 router.get("/", getAllEmployees);
-
-// Get a single employee
+//get a single employee
 router.get("/:id", getEmployeeById);
-
-// Update employee --manager
-router.patch("/:id", protect, rateLimiter(createEmployeeRateLimiterOptions), upload.single("image"), updateEmployee);
-
-// Change employee password --manager
+//update employee ---manager
+router.patch("/:id", protect, createAccountLimiter,upload.single("image"), updateEmployee);
+//change employee password  --manager
 router.patch("/changePassword/:id", protect, updateEmployeePassword);
-
-// Delete employee --manager
-router.delete("/:id", protect, deleteEmployee);
+//delete employee  --manager
+router.delete("/:id", deleteEmployee);
 
 module.exports = router;
