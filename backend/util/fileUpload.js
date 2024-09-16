@@ -1,7 +1,7 @@
 const multer = require("multer");
 const fs = require("fs");
 
-//Define file storage
+// Define file storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads");
@@ -9,13 +9,12 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     cb(
       null,
-
       new Date().toISOString().replace(/:/g, "-") + "-" + file.originalname
     );
   },
 });
 
-//file filter
+// File filter for allowed mime types
 function fileFilter(req, file, cb) {
   if (
     file.mimetype === "image/png" ||
@@ -28,9 +27,16 @@ function fileFilter(req, file, cb) {
   }
 }
 
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+// Define upload with size limits
+const upload = multer({ 
+  storage: storage, 
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024  // 5 MB file size limit
+  }
+});
 
-// File Size Formatter
+// Utility to format file sizes
 const fileSizeFormatter = (bytes, decimal) => {
   if (bytes === 0) {
     return "0 Bytes";
