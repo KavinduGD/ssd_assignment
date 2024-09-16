@@ -3,8 +3,10 @@ const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const { fileSizeFormatter } = require("../util/fileUpload");
 const cloudinary = require("cloudinary").v2;
-const fs = require("fs");
+// const fs = require("fs");
 const { error } = require("console");
+const path = require("path");
+const fs = require("fs").promises; 
 
 //create employee --manager
 const createEmployee = asyncHandler(async (req, res) => {
@@ -12,7 +14,7 @@ const createEmployee = asyncHandler(async (req, res) => {
 
   if (personType === "user") {
     res.status(401);
-    throw new Error("Not authorized , Please login as a manager");
+    throw new Error("Not authorized, Please login as a manager");
   }
 
   const { eId, fullName, email, mobile, role, password } = req.body;
@@ -20,7 +22,17 @@ const createEmployee = asyncHandler(async (req, res) => {
   //validate
   if (!eId || !fullName || !email || !mobile || !role || !password) {
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      try {
+        const uploadsDir = path.resolve(__dirname, "../uploads");
+        const filePath = path.resolve(uploadsDir, path.basename(req.file.path));
+        if (filePath.startsWith(uploadsDir)) {
+          await fs.unlink(filePath);
+        } else {
+          throw new Error("Invalid file path");
+        }
+      } catch (error) {
+        console.error("Error deleting file:", error);
+      }
     }
     res.status(400);
     throw new Error("Please fill all the fields");
@@ -37,24 +49,30 @@ const createEmployee = asyncHandler(async (req, res) => {
         folder: "KTS/employees",
         resource_type: "image",
       });
+
+      fileData = {
+        fileName: req.file.originalname,
+        filePath: uploadedFile.secure_url,
+        fileType: req.file.mimetype,
+        fileSize: fileSizeFormatter(req.file.size, 2),
+        fileID: uploadedFile.public_id,
+      };
+
+      //delete local file safely
+      const uploadsDir = path.resolve(__dirname, "../uploads");
+      const filePath = path.resolve(uploadsDir, path.basename(req.file.path));
+      if (filePath.startsWith(uploadsDir)) {
+        await fs.unlink(filePath);
+      } else {
+        throw new Error("Invalid file path");
+      }
     } catch (err) {
       res.status(500);
       throw new Error("Image could not be uploaded");
     }
-
-    fileData = {
-      fileName: req.file.originalname,
-      filePath: uploadedFile.secure_url,
-      fileType: req.file.mimetype,
-      fileSize: fileSizeFormatter(req.file.size, 2),
-      fileID: uploadedFile.public_id,
-    };
-
-    //delete file from uploads folder
-    fs.unlinkSync(req.file.path);
   }
 
-  //hash tha password using bcrypt
+  //hash the password using bcrypt
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -85,7 +103,7 @@ const createEmployee = asyncHandler(async (req, res) => {
         await cloudinary.uploader.destroy(uploadedFile.public_id);
       }
       res.status(400);
-      throw new Error(error);
+      throw new Error("Employee creation failed");
     }
   } catch (error) {
     // If an error occurs, delete the uploaded image from Cloudinary
@@ -164,7 +182,7 @@ const updateEmployee = asyncHandler(async (req, res) => {
 
   if (personType === "user") {
     res.status(401);
-    throw new Error("Not authorized , Please login as a manager");
+    throw new Error("Not authorized, Please login as a manager");
   }
 
   const employee = await Employee.findById(req.params.id);
@@ -177,15 +195,24 @@ const updateEmployee = asyncHandler(async (req, res) => {
     employee.email = email || employee.email;
     employee.mobile = mobile || employee.mobile;
     employee.role = role || employee.role;
-    // employee.photo =
-    //   Object.keys(fileData).length !== 0 ? fileData : employee.photo;
+
     let updatedEmployee;
     try {
       updatedEmployee = await employee.save();
     } catch (error) {
       res.status(400);
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        try {
+          const uploadsDir = path.resolve(__dirname, "../uploads");
+          const filePath = path.resolve(uploadsDir, path.basename(req.file.path));
+          if (filePath.startsWith(uploadsDir)) {
+            await fs.unlink(filePath);
+          } else {
+            throw new Error("Invalid file path");
+          }
+        } catch (error) {
+          console.error("Error deleting file:", error);
+        }
       }
       throw new Error(error);
     }
@@ -193,57 +220,66 @@ const updateEmployee = asyncHandler(async (req, res) => {
     let fileData = {};
     let uploadedFile;
 
-    //delete the existing image from cloudinary
+    // Manage image upload and deletion
     if (req.file) {
-      await cloudinary.uploader.destroy(employee.photo.fileID);
-
-      //upload new image
       try {
+        // Delete the existing image from Cloudinary
+        if (employee.photo.fileID) {
+          await cloudinary.uploader.destroy(employee.photo.fileID);
+        }
+
+        // Upload new image
         uploadedFile = await cloudinary.uploader.upload(req.file.path, {
           folder: "KTS/employees",
           resource_type: "image",
         });
+
+        fileData = {
+          fileName: req.file.originalname,
+          filePath: uploadedFile.secure_url,
+          fileType: req.file.mimetype,
+          fileSize: fileSizeFormatter(req.file.size, 2),
+          fileID: uploadedFile.public_id,
+        };
+
+        // Safely delete local file
+        const uploadsDir = path.resolve(__dirname, "../uploads");
+        const filePath = path.resolve(uploadsDir, path.basename(req.file.path));
+        if (filePath.startsWith(uploadsDir)) {
+          await fs.unlink(filePath);
+        } else {
+          throw new Error("Invalid file path");
+        }
       } catch (err) {
         res.status(500);
         throw new Error("Image could not be uploaded");
       }
-
-      fileData = {
-        fileName: req.file.originalname,
-        filePath: uploadedFile.secure_url,
-        fileType: req.file.mimetype,
-        fileSize: fileSizeFormatter(req.file.size, 2),
-        fileID: uploadedFile.public_id,
-      };
-
-      //delete file from uploads folder
-      fs.unlinkSync(req.file.path);
     }
 
-    updatedEmployee.photo =
+    updatedEmployee.photo = 
       Object.keys(fileData).length !== 0 ? fileData : updatedEmployee.photo;
 
     try {
       updatedEmployee = await updatedEmployee.save();
+      res.status(200).json({
+        _id: updatedEmployee._id,
+        eId: updatedEmployee.eId,
+        fullName: updatedEmployee.fullName,
+        email: updatedEmployee.email,
+        mobile: updatedEmployee.mobile,
+        role: updatedEmployee.role,
+        photo: updatedEmployee.photo,
+      });
     } catch (error) {
       res.status(400);
       throw new Error(error);
     }
-
-    res.status(200).json({
-      _id: updatedEmployee._id,
-      eId: updatedEmployee.eId,
-      fullName: updatedEmployee.fullName,
-      email: updatedEmployee.email,
-      mobile: updatedEmployee.mobile,
-      role: updatedEmployee.role,
-      photo: updatedEmployee.photo,
-    });
   } else {
     res.status(404);
     throw new Error("Employee not found");
   }
 });
+
 
 //delete employee --manager
 const deleteEmployee = asyncHandler(async (req, res) => {
