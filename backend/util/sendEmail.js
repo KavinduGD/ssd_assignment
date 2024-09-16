@@ -1,35 +1,35 @@
 const nodemailer = require("nodemailer");
 
 const sendEmail = async (subject, message, send_to, sent_from, reply_to) => {
-  //create email transporter
   const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: 587,
+    host: process.env.EMAIL_HOST,  // The SMTP server host
+    port: 587,     // Use STARTTLS port for TLS encryption
+    secure: false, // Use STARTTLS (secure: false means STARTTLS, true means SMTPS)
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL_USER, // Your SMTP username
+      pass: process.env.EMAIL_PASS, // Your SMTP password
     },
     tls: {
-      rejectUnauthorized: false,
+      // Ensure the server certificate is verified
+      rejectUnauthorized: true,
+      ciphers: 'SSLv3', // Optional: Specify the cipher suite for encryption
     },
   });
 
-  //options for sending the email
   const options = {
     from: sent_from,
     to: send_to,
-    reply_to: reply_to,
+    reply_to: reply_to || sent_from,
     subject: subject,
     html: message,
   };
 
-  //send email
-
-  transporter.sendMail(options, function (err, info) {
+  // Send the email and handle the response or any errors
+  transporter.sendMail(options, (err, info) => {
     if (err) {
-      console.log(err);
+      console.error("Error occurred during email sending:", err);
     } else {
-      console.log(info);
+      console.log("Email sent successfully:", info);
     }
   });
 };
